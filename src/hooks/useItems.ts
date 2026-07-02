@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, doc, updateDoc, deleteDoc, addDoc, Timestamp } from 'firebase/firestore';
-import { db } from '../firebase';
+import { authReady, db } from '../firebase';
 import type { Item } from '../types';
 
 export function useItems(containerId: string) {
@@ -8,22 +8,31 @@ export function useItems(containerId: string) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(
-      collection(db, 'items'),
-      where('containerId', '==', containerId)
-    );
+    let unsubscribe = () => {};
+    authReady.then(() => {
+      const q = query(
+        collection(db, 'items'),
+        where('containerId', '==', containerId)
+      );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(d => ({
-        id: d.id,
-        ...d.data(),
-      })) as Item[];
-      data.sort((a, b) => a.name.localeCompare(b.name));
-      setItems(data);
-      setLoading(false);
+      unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          const data = snapshot.docs.map(d => ({
+            id: d.id,
+            ...d.data(),
+          })) as Item[];
+          data.sort((a, b) => a.name.localeCompare(b.name));
+          setItems(data);
+          setLoading(false);
+        },
+        (err) => {
+          console.error(err);
+          setLoading(false); // don't leave the spinner hanging on error
+        }
+      );
     });
-
-    return unsubscribe;
+    return () => unsubscribe();
   }, [containerId]);
 
   const addItem = async (name: string, quantity: number, category: string, tags: string[]) => {

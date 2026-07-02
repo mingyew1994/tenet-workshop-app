@@ -1,7 +1,6 @@
 import { initializeApp } from 'firebase/app';
-// CHANGE: Added these imports
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
-import { getAuth, signInAnonymously } from 'firebase/auth';
+import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'demo-key',
@@ -14,14 +13,24 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// CHANGE: Initializing Firestore with the persistent local cache
+// Firestore with persistent local cache (fast repeat visits, offline support)
 export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({
-    tabManager: persistentMultipleTabManager()
-  })
+    tabManager: persistentMultipleTabManager(),
+  }),
 });
 
 export const auth = getAuth(app);
+
+// Resolves once we have a signed-in user, so queries fire at the right time.
+export const authReady = new Promise<void>((resolve) => {
+  const unsub = onAuthStateChanged(auth, (user) => {
+    if (user) {
+      unsub();
+      resolve();
+    }
+  });
+});
 
 // Auto sign-in anonymously
 signInAnonymously(auth).catch(console.error);

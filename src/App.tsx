@@ -1,8 +1,15 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router';
 import { Dashboard } from './pages/Dashboard';
-import { ContainerPage } from './pages/ContainerPage';
-import { QRAllPage } from './pages/QRAllPage';
 import './index.css';
+
+// Lazy-loaded: these aren't needed for the landing page, so they load on demand.
+const ContainerPage = lazy(() =>
+  import('./pages/ContainerPage').then(m => ({ default: m.ContainerPage }))
+);
+const QRAllPage = lazy(() =>
+  import('./pages/QRAllPage').then(m => ({ default: m.QRAllPage }))
+);
 
 function Header() {
   const location = useLocation();
@@ -38,11 +45,19 @@ function App() {
       <div className="app-layout">
         <Header />
         <main className="main-content">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/container/:containerId" element={<ContainerPage />} />
-            <Route path="/qr-codes" element={<QRAllPage />} />
-          </Routes>
+          <Suspense
+            fallback={
+              <div className="loading-container">
+                <div className="spinner" />
+              </div>
+            }
+          >
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/container/:containerId" element={<ContainerPage />} />
+              <Route path="/qr-codes" element={<QRAllPage />} />
+            </Routes>
+          </Suspense>
         </main>
       </div>
     </BrowserRouter>

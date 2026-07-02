@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
-import { db } from '../firebase';
+import { authReady, db } from '../firebase';
 import type { Item, SearchResult } from '../types';
 import { containers } from '../data/containers';
 
@@ -10,15 +10,25 @@ export function useSearch() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'items'), (snapshot) => {
-      const data = snapshot.docs.map(d => ({
-        id: d.id,
-        ...d.data(),
-      })) as Item[];
-      setAllItems(data);
-      setLoading(false);
+    let unsubscribe = () => {};
+    authReady.then(() => {
+      unsubscribe = onSnapshot(
+        collection(db, 'items'),
+        (snapshot) => {
+          const data = snapshot.docs.map(d => ({
+            id: d.id,
+            ...d.data(),
+          })) as Item[];
+          setAllItems(data);
+          setLoading(false);
+        },
+        (err) => {
+          console.error(err);
+          setLoading(false); // don't leave the spinner hanging on error
+        }
+      );
     });
-    return unsubscribe;
+    return () => unsubscribe();
   }, []);
 
   const results = useMemo((): SearchResult[] => {
@@ -41,7 +51,6 @@ export function useSearch() {
       .sort((a, b) => a.item.name.localeCompare(b.item.name));
   }, [allItems, searchQuery]);
 
-  // Compute item counts per container
   const itemCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const item of allItems) {
