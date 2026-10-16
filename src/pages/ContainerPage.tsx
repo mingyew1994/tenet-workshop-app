@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router';
-import { useItems } from '../hooks/useItems';
+import { useItemsContext } from '../context/ItemsContext';
 import { getContainer } from '../data/containers';
 import { ItemRow } from '../components/ItemRow';
 import { AddItemForm } from '../components/AddItemForm';
@@ -9,7 +9,8 @@ import { QRCodeModal } from '../components/QRCodeModal';
 export function ContainerPage() {
   const { containerId } = useParams<{ containerId: string }>();
   const container = getContainer(containerId || '');
-  const { items, loading, addItem, updateQuantity, removeItem } = useItems(containerId || '');
+  const { getContainerItems, loading, addItem, updateQuantity, removeItem } = useItemsContext();
+  const items = getContainerItems(containerId || '');
   const [showQR, setShowQR] = useState(false);
 
   if (!container) {
@@ -18,23 +19,20 @@ export function ContainerPage() {
         <div className="empty-state">
           <div className="empty-icon">❓</div>
           <div className="empty-text">Container not found</div>
-          <div className="empty-subtext">
-            <Link to="/" className="back-link">← Back to Dashboard</Link>
-          </div>
+          <div className="empty-subtext"><Link to="/" className="back-link">← Back to Dashboard</Link></div>
         </div>
       </div>
     );
   }
 
   if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="spinner" />
-      </div>
-    );
+    return <div className="loading-container"><div className="spinner" /></div>;
   }
 
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
+
+  const handleAddItem = (name: string, quantity: number, category: string, tags: string[]) =>
+    addItem(containerId || '', name, quantity, category, tags);
 
   return (
     <div className="container-page">
@@ -45,9 +43,7 @@ export function ContainerPage() {
           <span className="container-id">{container.id}</span>
         </div>
         <div className="container-actions">
-          <button className="qr-btn" onClick={() => setShowQR(true)}>
-            📱 QR Code
-          </button>
+          <button className="qr-btn" onClick={() => setShowQR(true)}>📱 QR Code</button>
         </div>
       </div>
 
@@ -79,7 +75,7 @@ export function ContainerPage() {
         )}
       </div>
 
-      <AddItemForm onAdd={addItem} />
+      <AddItemForm onAdd={handleAddItem} />
 
       {showQR && (
         <QRCodeModal
