@@ -5,17 +5,10 @@ interface AddItemFormProps {
 }
 
 const CATEGORIES = [
-  'Microcontrollers',
-  'Single Board Computers',
-  '3D Printing',
-  'Motion',
-  'Fasteners',
-  'Pneumatics',
-  'Horology',
-  'Voron Build',
-  'Electrical',
-  'Tools',
-  'Other',
+  'Filament',
+  'Electronics',
+  'Material Stock',
+  'Equipment',
 ];
 
 export function AddItemForm({ onAdd }: AddItemFormProps) {

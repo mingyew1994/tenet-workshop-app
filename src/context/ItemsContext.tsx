@@ -11,6 +11,7 @@ interface ItemsContextValue {
   getContainerItems: (containerId: string) => Item[];
   addItem: (containerId: string, name: string, quantity: number, category: string, tags: string[]) => Promise<void>;
   updateQuantity: (itemId: string, newQuantity: number) => Promise<void>;
+  updateItemName: (itemId: string, newName: string) => Promise<void>;
   removeItem: (itemId: string) => Promise<void>;
 }
 
@@ -24,7 +25,6 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
     const auth = getAuth();
     let unsubscribeDB: () => void;
 
-    // Wait for Firebase Auth to confirm the user is logged in
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
         unsubscribeDB = onSnapshot(
@@ -43,7 +43,6 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
           }
         );
       } else {
-        // If not logged in, clear data
         setAllItems([]);
         setLoading(false);
       }
@@ -108,13 +107,21 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const updateItemName = useCallback(async (itemId: string, newName: string) => {
+    if (!newName.trim()) return;
+    await updateDoc(doc(db, 'items', itemId), {
+      name: newName,
+      updatedAt: Timestamp.now(),
+    });
+  }, []);
+
   const removeItem = useCallback(async (itemId: string) => {
     await deleteDoc(doc(db, 'items', itemId));
   }, []);
 
   const value = useMemo<ItemsContextValue>(
-    () => ({ allItems, loading, itemCounts, getContainerItems, addItem, updateQuantity, removeItem }),
-    [allItems, loading, itemCounts, getContainerItems, addItem, updateQuantity, removeItem]
+    () => ({ allItems, loading, itemCounts, getContainerItems, addItem, updateQuantity, updateItemName, removeItem }),
+    [allItems, loading, itemCounts, getContainerItems, addItem, updateQuantity, updateItemName, removeItem]
   );
 
   return <ItemsContext.Provider value={value}>{children}</ItemsContext.Provider>;

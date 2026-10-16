@@ -9,7 +9,7 @@ import { QRCodeModal } from '../components/QRCodeModal';
 export function ContainerPage() {
   const { containerId } = useParams<{ containerId: string }>();
   const container = getContainer(containerId || '');
-  const { getContainerItems, loading, addItem, updateQuantity, removeItem } = useItemsContext();
+  const { getContainerItems, loading, addItem, updateQuantity, updateItemName, removeItem } = useItemsContext();
   const items = getContainerItems(containerId || '');
   const [showQR, setShowQR] = useState(false);
 
@@ -19,14 +19,20 @@ export function ContainerPage() {
         <div className="empty-state">
           <div className="empty-icon">❓</div>
           <div className="empty-text">Container not found</div>
-          <div className="empty-subtext"><Link to="/" className="back-link">← Back to Dashboard</Link></div>
+          <div className="empty-subtext">
+            <Link to="/" className="back-link">← Back to Dashboard</Link>
+          </div>
         </div>
       </div>
     );
   }
 
   if (loading) {
-    return <div className="loading-container"><div className="spinner" /></div>;
+    return (
+      <div className="loading-container">
+        <div className="spinner" />
+      </div>
+    );
   }
 
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
@@ -43,7 +49,9 @@ export function ContainerPage() {
           <span className="container-id">{container.id}</span>
         </div>
         <div className="container-actions">
-          <button className="qr-btn" onClick={() => setShowQR(true)}>📱 QR Code</button>
+          <button className="qr-btn" onClick={() => setShowQR(true)}>
+            📱 QR Code
+          </button>
         </div>
       </div>
 
@@ -62,6 +70,7 @@ export function ContainerPage() {
                 key={item.id}
                 item={item}
                 onUpdateQuantity={updateQuantity}
+                onUpdateName={updateItemName}
                 onDelete={removeItem}
               />
             ))}
