@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useMemo, useCallback, type ReactNode } from 'react';
 import { collection, onSnapshot, doc, updateDoc, deleteDoc, addDoc, Timestamp } from 'firebase/firestore';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { db } from '../firebase';
 import type { Item } from '../types';
 
@@ -20,22 +21,38 @@ export function ItemsProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      collection(db, 'items'),
-      (snapshot) => {
-        const data = snapshot.docs.map(d => ({
-          id: d.id,
-          ...d.data(),
-        })) as Item[];
-        setAllItems(data);
-        setLoading(false);
-      },
-      (err) => {
-        console.error('Firestore listener error:', err);
+    const auth = getAuth();
+    let unsubscribeDB: () => void;
+
+    // Wait for Firebase Auth to confirm the user is logged in
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        unsubscribeDB = onSnapshot(
+          collection(db, 'items'),
+          (snapshot) => {
+            const data = snapshot.docs.map(d => ({
+              id: d.id,
+              ...d.data(),
+            })) as Item[];
+            setAllItems(data);
+            setLoading(false);
+          },
+          (err) => {
+            console.error('Firestore listener error:', err);
+            setLoading(false);
+          }
+        );
+      } else {
+        // If not logged in, clear data
+        setAllItems([]);
         setLoading(false);
       }
-    );
-    return () => unsubscribe();
+    });
+
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeDB) unsubscribeDB();
+    };
   }, []);
 
   const itemCounts = useMemo(() => {
